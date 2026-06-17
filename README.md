@@ -1,110 +1,199 @@
-# Revenue-plan-analysis
+# Revenue Plan Analysis
 
-Проект для аналізу дохідів та прогнозування виконання планів доходу на основі історичних даних та прогнозних моделей.
+## 📋 Project Description
 
-## Призначення
+This repository contains a comprehensive revenue performance analysis that compares actual sales revenue with planned revenue targets.
 
-Репозиторій містить SQL запити та аналітичні инструменти для:
-- Розрахунку фактичних дохідів з замовлень
-- Порівняння фактичних дохідів з прогнозованими значеннями
-- Відстеження прогресу досягнення цільових показників
-- Розрахунку процента виконання плану доходу
+Using SQL and cumulative calculations, the project combines historical sales data with forecasted revenue to monitor business performance and evaluate progress toward financial goals.
 
-## SQL Запит: revenue.sql
+The analysis provides a clear view of revenue trends and KPI achievement over time.
 
-### Загальний опис
-Запит виконує комплексний аналіз дохідів, поєднуючи фактичні дані про продажі з прогнозованими показниками та розраховуючи кумулятивні метрики виконання плану.
+---
 
-### Структура запиту
+## 🎯 Project Objectives
 
-#### 1. **revenue_CTE** - Розрахунок фактичних дохідів
-```sql
-WITH revenue_CTE AS (
-  SELECT
-    s.date,
-    SUM(p.price) AS revenue
-  FROM `DA.order` o
-  JOIN `DA.product` p ON o.item_id = p.item_id
-  JOIN `DA.session` s ON o.ga_session_id = s.ga_session_id
-  GROUP BY s.date
-)
-```
-- **Мета**: Агрегація фактичних дохідів за кожний день
-- **Джерела даних**:
-  - `DA.order` - таблиця замовлень
-  - `DA.product` - таблиця продуктів з цінами
-  - `DA.session` - таблиця сесій з датами
-- **Результат**: Денні суми доходів на основі проданих товарів
+The main goals of this project are to:
 
-#### 2. **final_union** - Об'єднання фактичних та прогнозованих даних
-```sql
-final_union AS(
-  SELECT date, 0 AS predict, revenue FROM revenue_CTE
-  UNION ALL
-  SELECT date, predict, 0 AS revenue FROM `DA.revenue_predict` rp
-)
-```
-- **Мета**: Комбінування фактичних дохідів з прогнозованими значеннями
-- **Логіка**: 
-  - Фактичні дані мають `predict = 0`
-  - Прогнозні дані мають `revenue = 0`
-  - Це дозволяє агрегувати обидві метрики в одному рядку
+* Calculate actual daily revenue;
+* Compare actual revenue with planned revenue targets;
+* Monitor cumulative revenue growth;
+* Track progress toward business goals;
+* Measure revenue plan achievement over time;
+* Support strategic business decision-making.
 
-#### 3. **final** - Консолідація даних по датах
-```sql
-final AS(
-  SELECT
-    date,
-    SUM(predict) AS predict,
-    SUM(revenue) AS revenue
-  FROM final_union
-  GROUP BY date
-)
-```
-- **Мета**: Агрегація фактичних та прогнозованих дохідів по кожній даті
-- **Результат**: Один рядок per дата з відповідними `revenue` та `predict` значеннями
+---
 
-#### 4. **Фінальний SELECT** - Розрахунок кумулятивних метрик
-```sql
-SELECT
-  date,
-  SUM(revenue) OVER(ORDER BY final.date) AS running_revenue,
-  SUM(predict) OVER(ORDER BY final.date) AS running_predict,
-  SUM(revenue) OVER(ORDER BY final.date) / SUM(predict) OVER(ORDER BY final.date) * 100 AS goal_percent
-FROM final
+## 🛠️ Technology Stack
+
+* **SQL (Google BigQuery)** – data extraction and analysis;
+* **Google BigQuery** – cloud data warehouse;
+* **Common Table Expressions (CTEs)** – modular query structure;
+* **UNION ALL** – combining actual and forecasted data;
+* **Window Functions** – cumulative calculations;
+* **KPI Analytics** – revenue performance measurement.
+
+---
+
+## 📂 Project Structure
+
+```text
+Revenue-Plan-Analysis/
+├── README.md
+└── revenue.sql
 ```
 
-### Вихідні колонки
+---
 
-| Колонка | Опис |
-|---------|------|
-| `date` | Дата |
-| `running_revenue` | **Кумулятивний фактичний дохід** - сума всіх дохідів з початку до поточної дати (ковзна сума) |
-| `running_predict` | **Кумулятивний прогнозований дохід** - сума всіх прогнозованих дохідів з початку до поточної дати |
-| `goal_percent` | **Процент виконання плану** - відношення кумулятивного фактичного доходу до кумулятивного прогнозу, помножене на 100% |
+## 📊 Data Sources
 
-### Приклад результатів
+The analysis combines information from four data sources:
 
-| date | running_revenue | running_predict | goal_percent |
-|------|-----------------|-----------------|--------------|
-| 2024-01-01 | 5000 | 4500 | 111.11% |
-| 2024-01-02 | 12500 | 11000 | 113.64% |
-| 2024-01-03 | 18500 | 18500 | 100.00% |
+| Table              | Description                 |
+| ------------------ | --------------------------- |
+| DA.order           | Customer order transactions |
+| DA.product         | Product pricing information |
+| DA.session         | Transaction dates           |
+| DA.revenue_predict | Planned revenue targets     |
 
-## Кейс-юс
+---
 
-Цей запит використовується для:
-- 📊 **Моніторингу виконання** - відстеження, наскільки добре компанія дотримується плану доходу
-- 📈 **Аналізу трендів** - виявлення днів, коли дохід перевищує або не дорівнює прогнозу
-- 🎯 **Прогнозування** - оцінка ймовірності досягнення цільових показників доходу до кінця періоду
-- 📉 **Звітування** - подання ключових показників KPI для менеджменту
+## 📈 Key Metrics
 
-## Файлова структура
+The project calculates several business KPIs.
 
-```
-Revenue-plan-analysis/
-├── README.md              # Цей файл
-└── queries/
-    └── revenue.sql        # Основний запит аналізу дохідів
-```
+### Revenue Metrics
 
+* Daily actual revenue;
+* Daily planned revenue;
+* Cumulative actual revenue;
+* Cumulative planned revenue.
+
+### Performance Metrics
+
+* Revenue target achievement;
+* Running revenue growth;
+* Running forecast growth;
+* Percentage of goal completion.
+
+---
+
+## ❓ Business Questions
+
+This project aims to answer the following questions:
+
+* Is the company meeting its revenue targets?
+* How does actual revenue compare to planned revenue?
+* How does revenue performance change over time?
+* What percentage of the revenue goal has been achieved?
+* Are revenue trends moving above or below expectations?
+
+---
+
+## 📊 SQL Analysis Overview
+
+The SQL query consists of four main stages.
+
+### 1. Actual Revenue Calculation
+
+Calculates total daily revenue from completed orders.
+
+The query combines:
+
+* Order data;
+* Product prices;
+* Transaction dates.
+
+---
+
+### 2. Combining Actual and Planned Revenue
+
+Uses `UNION ALL` to merge:
+
+* Actual revenue;
+* Planned revenue targets.
+
+This approach creates a unified structure for further analysis.
+
+---
+
+### 3. Daily Consolidation
+
+Aggregates actual and planned revenue by date.
+
+The result contains one record per day with both revenue metrics.
+
+---
+
+### 4. Cumulative KPI Calculation
+
+Uses SQL window functions to calculate:
+
+* Running actual revenue;
+* Running planned revenue;
+* Revenue goal achievement percentage.
+
+The final KPI is calculated as:
+
+**Goal Achievement (%) = Cumulative Actual Revenue / Cumulative Planned Revenue × 100**
+
+---
+
+## 📊 Output Metrics
+
+The final query returns the following columns:
+
+| Column          | Description                         |
+| --------------- | ----------------------------------- |
+| date            | Analysis date                       |
+| running_revenue | Cumulative actual revenue           |
+| running_predict | Cumulative planned revenue          |
+| goal_percent    | Revenue goal achievement percentage |
+
+---
+
+## 💡 Key Insights
+
+The analysis provides insights into:
+
+* Revenue growth trends;
+* Business performance against targets;
+* Revenue plan execution;
+* Financial KPI tracking;
+* Long-term revenue progress.
+
+---
+
+## 🚀 Business Value
+
+The results can help businesses:
+
+* Monitor revenue performance;
+* Track KPI achievement;
+* Identify periods of underperformance;
+* Evaluate financial progress;
+* Support strategic planning;
+* Improve forecasting accuracy.
+
+---
+
+## 🎓 Skills Demonstrated
+
+This project showcases practical experience in:
+
+* SQL querying;
+* Google BigQuery;
+* Data aggregation;
+* Common Table Expressions (CTEs);
+* UNION ALL;
+* Window Functions;
+* Running totals;
+* KPI analysis;
+* Financial analytics;
+* Business reporting;
+* Data storytelling.
+
+---
+
+## 📌 Conclusion
+
+Revenue Plan Analysis demonstrates how SQL can be used to monitor business performance by combining actual sales data with planned revenue targets. Through cumulative calculations and KPI tracking, the project provides valuable insights into revenue growth and progress toward financial objectives, supporting data-driven business decision-making.
